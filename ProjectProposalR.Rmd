@@ -1,0 +1,93 @@
+---
+title: "Project Proposal"
+author: "RAAS"
+date: "November 15, 2018"
+output:
+    
+    html_document:
+    theme: united
+    highlight: tango
+    keep_md: true
+  
+---
+
+#**Title: Predictive Policing for EDA on Dallas Crime DataSet**
+
+![](C:/Users/ASHISH SONI/Documents/Crimedataset/dallas-1.jpg)
+
+##**Members**: 
+
+* *R*anjan Venkatesh
+* *A*lisha Mehta
+* *A*shish Soni
+* *S*hashikanth Sagunala
+
+###**Background and Motivation**:
+
+1. To assist the law enforcement in making certain helpful predictions      based on the heuristics of the past incidents.
+
+2. Predictive insights help the law enforcement authorities to channel      their resources in the most effective way in order to curb potential     crimes.
+
+
+###**Project Objectives**:
+
+1. How days of the week and time of incident occurrence (morning/evening)    affect the crime rate?
+
+2. What crimes are most common during evening?
+
+3. How crimes vary within different neighborhood?
+
+4. What percentage of crimes are “Hate crimes”? 
+
+5. What age group in adults (over 18) is highly prone to be a victim?
+
+6. What number of crime incidents that might occur given the location Zip    code, day of the week and time of occurence?
+
+
+###**Name of the dataset**:
+
+Dallas Open Data-Police Incidents
+
+###**Design Overview**:
+
+1. Data Cleaning : Includes resolving missing values or changing views
+
+2. Data Preprocessing : Attribute mutations 
+
+3. Data Analysis and Visualizations : Building models and getting           meaningful insights from the given dataset. Algorithms that are          planned for the implementation are as follows:
+ + K-nearest neighbor 
+ + Linear Regression
+ + Naive Bayes (tentative)
+ + Random Forest Regressor (tentative)
+ + XGBoost (tentative)
+
+4. Model Evaluation : Evaluate the models used, based on the confusion      matrix.
+
+###**Distribution of responsibilities and deadlines**:
+
+* 01-11-18: Team formation and Discussion about Project Proposal           Document.
+
+* 09-11-18: Creating Project Proposal - Ashish Soni and Ranjan Venkatesh 
+
+* 16-11-18: Project Proposal Submission
+
+* 22-11-18: Data Preprocessing and Cleaning - Alisha Mehta and Ashish      Soni
+
+* 29-11-18: Team Discussion about Modelling and Visualizations
+
+* 05-12-18: Working on '2' Models and Creating its Visualizations -        Alisha Mehta and Ashish Soni 
+
+* 11-12-18: Working on other '2' Models and Creating its Visualizations -   Ranjan Venkatesh and Shashikanth Sagunala
+
+* 19-12-18: Team Discussion, Exchange of Ideas and Feedback about the      Completed Work
+
+* 28-12-18: Website and Screeencast creation -  Alisha Mehta and           Shashikanth Sagunala
+
+* 01-01-19: Model Tuning and  Evaluation - Ranjan Venkatesh and            Ashish Soni
+
+* 08-01-19: Detailed Team discussion and Feedbacks about the Project       Work. Final Editing or Making changes in the work Completed.
+
+* 12-01-19: Creating the Presentation- Alisha Mehta and Ranjan Venkatesh.
+            
+* 16-01-19: Project Submission
+

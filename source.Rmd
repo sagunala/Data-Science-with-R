@@ -9,10 +9,11 @@ output: html_notebook
 library(tibble)
 library(dplyr)
 library(readr)
-#Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized data
+#Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 #dallas_incidents<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
-as_tibble(dallas_incidents)
-dallas=select(dallas_incidents,1,3,5,6,7,9,38,43,44,46,47,48,50,53,54,69,75,76,78,95,96,97)
+#as_tibble(dallas_incidents)
+dallas=select(dallas_incidents,1,3,5,6,7,9,13,14,15,38,43,44,46,47,48,50,53,54,69,75,76,78,89,95,96,97)
+as_tibble(dallas)
 ```
 *2. Data Pre-processing*
 - transforms the attribute 'call received date time' string to R datetime object and sort them in ascending order  
@@ -21,17 +22,48 @@ dallas=select(dallas_incidents,1,3,5,6,7,9,38,43,44,46,47,48,50,53,54,69,75,76,7
 ```{r}
 library(lubridate)
 library(magrittr)
+library(dplyr)
 time_slot_vec=seq(0,24,6)
 labels_vec=c("0-6","7-12","13-18","19-23")
-dallas%>%
-  #rename(`Call Received Date Time`=`time occured`)
+dallas%<>%
   mutate(`Call Received Date Time`=as_datetime(mdy_hms(`Call Received Date Time`)))%>%
   arrange(`Call Received Date Time`)%>%
-  mutate(`week of the day`=wday(`Call Received Date Time`,label = TRUE),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
+  mutate(`week of the day`=wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
   mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))
-  #rename(`time occured`=`Call Received Date Time`)
-```
 
+#anyDuplicated(dallas$`Service Number ID`)
+#unique(dallas$)
+
+```
+*3. Exploratory Analysis / Visualizations*
+3.1 What crimes are frequent?
+```{r}
+library(ggplot2)
+library(forcats)
+dallas%>%
+  filter(!is.na(`NIBRS Crime Category`))%>%
+  ggplot(aes(fct_infreq(`NIBRS Crime Category`),fill=`NIBRS Crime Category`))+geom_bar(position = "stack") +  labs(title="Crime Categories Frequency", subtitle="count for every kind of crime that occured", y="Frequency", x="Crime") + coord_flip() + theme(legend.position="none")
+
+```
+3.2 How Gender and the time of crime are related and volume of crime for each time slot. 
+```{r}
+library(ggplot2)
+library(forcats)
+dallas%>%
+filter(!is.na(`Victim Gender`) & (`Victim Gender`=="Male" | `Victim Gender`=="Female") & !is.na(`time slot of occurence`))%>%
+ggplot(aes(fct_infreq(`Victim Gender`), fill = `time slot of occurence`) ) +
+  geom_bar(position = "stack")
+
+```
+3.3 How crimes relate to the time of day 
+```{r}
+library(ggplot2)
+library(scales)
+library(forcats)
+dallas%>%
+filter(!is.na(`NIBRS Crime Category`) & !is.na(`time slot of occurence`))%>%
+ggplot(aes(fct_infreq(`NIBRS Crime Category`), fill = `time slot of occurence`)) +geom_bar(position = "stack")+coord_flip()
+```
 
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.

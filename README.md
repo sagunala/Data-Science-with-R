@@ -1,6 +1,6 @@
 # Data-Science-with-R
 
-Title: Predictive Policing for EDA on Dallas Crime DataSet
+Title: Predictive Policing and EDA on Dallas Crime DataSet
 
 ABSTRACT:
 

@@ -28,18 +28,19 @@ labels_vec=c("0-6","7-12","13-18","19-23")
 dallas%<>%
   mutate(`Call Received Date Time`=as_datetime(mdy_hms(`Call Received Date Time`)))%>%
   arrange(`Call Received Date Time`)%>%
-  mutate(`week of the day`=wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
+  mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
   mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))
 
 #anyDuplicated(dallas$`Service Number ID`)
 #unique(dallas$)
-
+as_tibble(dallas)
 ```
-*3. Exploratory Analysis / Visualizations*
+*3. Exploratory Data Anaylsis / Visualizations*
 3.1 What crimes are frequent?
 ```{r}
 library(ggplot2)
 library(forcats)
+#as_tibble(dallas)
 dallas%>%
   filter(!is.na(`NIBRS Crime Category`))%>%
   ggplot(aes(fct_infreq(`NIBRS Crime Category`),fill=`NIBRS Crime Category`))+geom_bar(position = "stack") +  labs(title="Crime Categories Frequency", subtitle="count for every kind of crime that occured", y="Frequency", x="Crime") + coord_flip() + theme(legend.position="none")
@@ -49,20 +50,173 @@ dallas%>%
 ```{r}
 library(ggplot2)
 library(forcats)
-dallas%>%
-filter(!is.na(`Victim Gender`) & (`Victim Gender`=="Male" | `Victim Gender`=="Female") & !is.na(`time slot of occurence`))%>%
-ggplot(aes(fct_infreq(`Victim Gender`), fill = `time slot of occurence`) ) +
-  geom_bar(position = "stack")
+library(plotly)
 
+
+dallas_gender_and_timeslot<-dallas%>%
+filter(!is.na(`Victim Gender`) & (`Victim Gender`=="Male" | `Victim Gender`=="Female") & !is.na(`time slot of occurence`))%>%
+  group_by(`Victim Gender`,`time slot of occurence`)%>%
+  summarise (`number of crimes` = n()) %>%
+  mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
+  
+as_tibble(dallas_gender_and_timeslot)
+ggplot_dgt<-ggplot(dallas_gender_and_timeslot,aes(x=`Victim Gender`,y=`number of crimes`,label=percentage, fill = `time slot of occurence`))  +
+  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Victim Gender",y="Number of Crimes",title="Victim Gender and corresponding Time Slot of Crime Occurence")
+ggplotly(ggplot_dgt)
 ```
 3.3 How crimes relate to the time of day 
 ```{r}
 library(ggplot2)
 library(scales)
-library(forcats)
-dallas%>%
-filter(!is.na(`NIBRS Crime Category`) & !is.na(`time slot of occurence`))%>%
-ggplot(aes(fct_infreq(`NIBRS Crime Category`), fill = `time slot of occurence`)) +geom_bar(position = "stack")+coord_flip()
+dallas_crime_and_timeslot<-dallas%>%
+  filter(!is.na(`NIBRS Crime Category`) & !is.na(`time slot of occurence`))%>%
+  group_by(`NIBRS Crime Category`,`time slot of occurence`)%>%
+  summarise(`number of crimes` = n())%>%
+  arrange(`number of crimes`,.by_group = TRUE)
+
+ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")
+ggplotly(ggplot_dct)
+```
+3.4 How crimes are related to days of the week and time slot of occurence
+```{r}
+library(ggplot2)
+library(scales)
+library(plotly)
+dallas_crime_rate_per_week_and_timeslot<-dallas%>%
+  filter(!is.na(`time slot of occurence`) &  !is.na(`week of the day`))%>%
+  group_by(`time slot of occurence`,`week of the day`)%>%
+  summarize(`number of crimes` = n())%>%
+  mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
+
+ggplot_dcrwt=dallas_crime_rate_per_week_and_timeslot%>%
+  ggplot(aes(x=`week of the day`,y=`number of crimes`, fill = `time slot of occurence` , label=percentage)) +geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+coord_flip()+labs(x="Day in the Week",y="Number of Crimes",title = "Days of Week and Corresponding observed Crimes per Time Slot")
+
+ggplotly(ggplot_dcrwt)
+```
+3.5 How crime rate varies in the week
+```{r}
+dallas_crime_rate_per_week<-dallas%>%
+  filter(!is.na(`rounded time`) & !is.na(`Zip Code`) & !is.na(`week of the day`))%>%
+  group_by(`rounded time`,`Zip Code`,`week of the day`)%>%
+  summarize(`number of crimes` = n())%>%
+  filter(`number of crimes`>120)
+
+ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_boxplot()
+ggplotly(ggplot_crw)
+```
+
+*Rough Working [ set 1 : regression problem] - Finding explanatory variables - Resp Var : Type of Incident, Exp Vars: Zip Code, Day of Week and (rounded time in hour/timeslot*
+```{r}
+library(caret)
+dallas_model_data<-dallas%>%
+  filter(!is.na(`time slot of occurence`) & !is.na(`Zip Code`) & !is.na(`week of the day`))%>%
+  group_by(`time slot of occurence`,`Zip Code`,`week of the day`)%>%
+  summarize(`number of crimes` = n())%>%
+  filter(`number of crimes`>500)
+
+
+d_mod=lm(dallas_model_data$`number of crimes` ~ dallas_model_data$`Zip Code`+dallas_model_data$`week of the day`+dallas_model_data$`time slot of occurence`, data = dallas_model_data) 
+summary(d_mod)
+#anova(d_mod)
+#confint(d_mod)
+
+ggplot(dallas_model_data, aes(x=dallas_model_data$`time slot of occurence`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
+ggplot(dallas_model_data, aes(x=dallas_model_data$`week of the day`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
+ggplot(dallas_model_data, aes(x=dallas_model_data$`Zip Code`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
+
+```
+
+*Rough Working[ set 2: classification problem ] -  Finding explanatory variables - Resp Var : Type of Incident, Exp Vars: Zip Code, Day of Week and (rounded time in hour/timeslot)*
+```{r}
+library(magrittr)
+library(MESS)
+
+#Check for - Predicting Type of Incident that can occur at a given zip code, time and day of the week using chi-square
+#Null hypothesis : There is no association between 2 variables
+print("Chi Square to check correlation between - Resp Var : Type of Incident, Exp Vars: Zip Code, Day of Week and (rounded time in hour/timeslot)")
+
+#Check chi-square for (Type of incident,Zip Code) 
+tbl_zip<-dallas%>%
+  filter(!is.na(`Type of Incident`) & !is.na(`Zip Code`))%>%
+  categorize(`Type of Incident`,`Zip Code`)
+
+print("Chi square value for Type of Incident, Zip Code :")
+  if(chisq.test(tbl_zip,simulate.p.value = TRUE)[[3]]<0.05){
+    print("p-value is significant for Zip code and Type of Incident - Null Hypothesis rejected")
+  }else{
+    print("Null hypothesis sustained - no significant association observed")
+  }
+#Check chi-square for (Type of incident,time)
+tbl_time<-dallas%>%
+  filter(!is.na(`Type of Incident`) & !is.na(`rounded time`))%>%
+  categorize(`Type of Incident`,`rounded time`)
+print("Chi square value for Type of Incident, time :")
+  if(chisq.test(tbl_time,simulate.p.value = TRUE)[[3]]<0.05){
+    print("p-value is significant for time and Type of Incident - Null Hypothesis rejected")
+  }else{
+    print("Null hypothesis sustained - no significant association observed")
+  }
+
+
+#Check chi-square for (Type of incident,day of week)
+tbl_week<-dallas%>%
+  filter(!is.na(`Type of Incident`) & !is.na(`week of the day`))%>%
+  categorize(`Type of Incident`,`week of the day`)
+
+print("Chi square value for Type of Incident, day of week :")
+if(chisq.test(tbl_week,simulate.p.value = TRUE)[[3]]<0.05){
+    print("p-value is significant for day of week and Type of Incident - Null Hypothesis rejected")
+  }else{
+    print("Null hypothesis sustained - no significant association observed")
+  }
+
+#Check chi-square for (Type of incident,time slot)
+tbl_timeslot<-dallas%>%
+  filter(!is.na(`Type of Incident`) & !is.na(`time slot of occurence`))%>%
+  categorize(`Type of Incident`,`time slot of occurence`)
+
+print("Chi square value for Type of Incident, time slot :")
+if(chisq.test(tbl_timeslot,simulate.p.value = TRUE)[[3]]<0.05){
+    print("p-value is significant for time slot and Type of Incident - Null Hypothesis rejected")
+  }else{
+    print("Null hypothesis sustained - no significant association observed")
+  }
+
+```
+*Rough Working- Training model for set 2: classification problem*
+```{r}
+library(caret)
+
+dallas_tzwt_data<- dallas%>%
+  select(`Type of Incident`,`Zip Code`,`week of the day`,`rounded time`,`Call Received Date Time`)%>%
+  filter(!is.na(`Type of Incident`) & !is.na(`Zip Code`) & !is.na(`week of the day`) & !is.na(`rounded time`))%>%
+  mutate(`Type of Incident`= factor(`Type of Incident`),`week of the day2`= lubridate::wday(`Call Received Date Time`))
+
+length(unique(dallas_tzwt_data$`Type of Incident`))
+
+set.seed(3037)
+intrain <- createDataPartition(y = dallas_tzwt_data$`Type of Incident`, p= 0.7, list = FALSE)
+training <- dallas_tzwt_data[intrain,]
+testing <- dallas_tzwt_data[-intrain,]
+
+anyNA(dallas_tzwt_data)
+
+dim(training)
+dim(testing)
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3,verboseIter = TRUE)
+#set.seed(3233)
+
+ svm_Linear <- train(`Type of Incident` ~., data = training, method = "svmLinear",
+                  trControl=trctrl,
+                  preProcess = c("center", "scale"),
+                  tuneLength = 10)
+
+```
+
+*Rough Working- Training model for set 1: regression problem*
+```{r}
+
 ```
 
 

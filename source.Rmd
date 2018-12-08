@@ -3,49 +3,71 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-*1. Data Cleaning*
+*1. Data Reading*
 - reads police_incidents.csv and loads only required attributes into a dataframe object
 ```{r}
 library(tibble)
 library(dplyr)
 library(readr)
+library(magrittr)
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 #dallas_incidents<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
 #as_tibble(dallas_incidents)
-dallas=select(dallas_incidents,1,3,5,6,7,9,13,14,15,38,43,44,46,47,48,50,53,54,69,75,76,78,89,95,96,97)
-as_tibble(dallas)
+
+dallas_incidents%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
+as_tibble(dallas_incidents)
+length((na.omit(dallas_incidents$`NIBRS Crime Category`)))
 ```
 *2. Data Pre-processing*
+- cleaning the required attributes
+- cleaning the division attribute 
 - transforms the attribute 'call received date time' string to R datetime object and sort them in ascending order  
-- compute a new attribute 'week of the day'(name of the weekday, incident occured viz Mon,Tue and so on) and 'rounded time'(Hours being rounded off to closest value and only hour value is extracted from the rounded date) from 'call recieved date time'
+- compute a new attribute 'week of the day'(name of the weekday, incident occured viz Mon,Tue and so on), 'rounded time'(Hours being rounded off to closest value and only hour value is extracted from the rounded date) and week number from 'call recieved date time'
 - transform values of 'rounded time' to four ordinal values and compute 'time slot of occurence' attribute.
 ```{r}
 library(lubridate)
 library(magrittr)
+library(zipcode)
 library(dplyr)
+library(stringr)
+data("zipcode")
 time_slot_vec=seq(0,24,6)
 labels_vec=c("0-6","7-12","13-18","19-23")
-dallas%<>%
-  mutate(`Call Received Date Time`=as_datetime(mdy_hms(`Call Received Date Time`)))%>%
+#as_tibble(dallas)
+dallas_incidents$`Zip Code`=clean.zipcodes(dallas_incidents$`Zip Code`)
+#as_tibble(dallas)
+dallas<-dallas_incidents%>%
+   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`))%>%
+  inner_join(zipcode, by = c("Zip Code" = "zip"))%>%
+  filter(`city`=="Dallas")%>%
+  mutate(`Division`=str_to_upper(str_replace(`Division`," ","")))%>%
+  mutate(`Call Received Date Time`= as_datetime(mdy_hms(`Call Received Date Time`)))%>%
+  #filter(`Call Received Date Time`>as_datetime(mdy_hms("01/11/2014 00:00:00")) &  `Call Received Date Time`<as_datetime(mdy_hms("01/11/2018 00:00:00")))%>%
+  mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`week number of the day`=lubridate::wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
+  mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))%>%
   arrange(`Call Received Date Time`)%>%
-  mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
-  mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))
+  select(-`city`,-`state`,-`latitude`,-`longitude`)
 
 #anyDuplicated(dallas$`Service Number ID`)
-#unique(dallas$)
+#unique(dallas)
+#length(unique(dallas$`NIBRS Crime Category`))
 as_tibble(dallas)
+# first(dallas$`Call Received Date Time`)
+# last(dallas$`Call Received Date Time`)
+# head(dallas,100)
+# tail(dallas,100)
 ```
 *3. Exploratory Data Anaylsis / Visualizations*
 3.1 What crimes are frequent?
 ```{r}
 library(ggplot2)
 library(forcats)
-#as_tibble(dallas)
+
 dallas%>%
-  filter(!is.na(`NIBRS Crime Category`))%>%
   ggplot(aes(fct_infreq(`NIBRS Crime Category`),fill=`NIBRS Crime Category`))+geom_bar(position = "stack") +  labs(title="Crime Categories Frequency", subtitle="count for every kind of crime that occured", y="Frequency", x="Crime") + coord_flip() + theme(legend.position="none")
 
 ```
+
 3.2 How Gender and the time of crime are related and volume of crime for each time slot. 
 ```{r}
 library(ggplot2)
@@ -54,7 +76,7 @@ library(plotly)
 
 
 dallas_gender_and_timeslot<-dallas%>%
-filter(!is.na(`Victim Gender`) & (`Victim Gender`=="Male" | `Victim Gender`=="Female") & !is.na(`time slot of occurence`))%>%
+filter( (`Victim Gender`=="Male" | `Victim Gender`=="Female"))%>%
   group_by(`Victim Gender`,`time slot of occurence`)%>%
   summarise (`number of crimes` = n()) %>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
@@ -69,7 +91,6 @@ ggplotly(ggplot_dgt)
 library(ggplot2)
 library(scales)
 dallas_crime_and_timeslot<-dallas%>%
-  filter(!is.na(`NIBRS Crime Category`) & !is.na(`time slot of occurence`))%>%
   group_by(`NIBRS Crime Category`,`time slot of occurence`)%>%
   summarise(`number of crimes` = n())%>%
   arrange(`number of crimes`,.by_group = TRUE)
@@ -83,7 +104,6 @@ library(ggplot2)
 library(scales)
 library(plotly)
 dallas_crime_rate_per_week_and_timeslot<-dallas%>%
-  filter(!is.na(`time slot of occurence`) &  !is.na(`week of the day`))%>%
   group_by(`time slot of occurence`,`week of the day`)%>%
   summarize(`number of crimes` = n())%>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
@@ -95,12 +115,13 @@ ggplotly(ggplot_dcrwt)
 ```
 3.5 How crime rate varies in the week
 ```{r}
+as_tibble(dallas)
 dallas_crime_rate_per_week<-dallas%>%
-  filter(!is.na(`rounded time`) & !is.na(`Zip Code`) & !is.na(`week of the day`))%>%
-  group_by(`rounded time`,`Zip Code`,`week of the day`)%>%
-  summarize(`number of crimes` = n())%>%
-  filter(`number of crimes`>120)
+  select(`rounded time`,`Division`,`week of the day`)%>%
+  group_by(`rounded time`,`Division`,`week of the day`)%>%
+  summarize(`number of crimes` = n())
 
+#dallas_crime_rate_per_week
 ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_boxplot()
 ggplotly(ggplot_crw)
 ```
@@ -109,20 +130,18 @@ ggplotly(ggplot_crw)
 ```{r}
 library(caret)
 dallas_model_data<-dallas%>%
-  filter(!is.na(`time slot of occurence`) & !is.na(`Zip Code`) & !is.na(`week of the day`))%>%
-  group_by(`time slot of occurence`,`Zip Code`,`week of the day`)%>%
-  summarize(`number of crimes` = n())%>%
-  filter(`number of crimes`>500)
+  group_by(`time slot of occurence`,`Division`,`week of the day`)%>%
+  summarize(`number of crimes` = n())
 
 
-d_mod=lm(dallas_model_data$`number of crimes` ~ dallas_model_data$`Zip Code`+dallas_model_data$`week of the day`+dallas_model_data$`time slot of occurence`, data = dallas_model_data) 
+d_mod=lm(dallas_model_data$`number of crimes` ~ dallas_model_data$`Division`+dallas_model_data$`week of the day`+dallas_model_data$`time slot of occurence`, data = dallas_model_data) 
 summary(d_mod)
 #anova(d_mod)
 #confint(d_mod)
 
 ggplot(dallas_model_data, aes(x=dallas_model_data$`time slot of occurence`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
 ggplot(dallas_model_data, aes(x=dallas_model_data$`week of the day`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
-ggplot(dallas_model_data, aes(x=dallas_model_data$`Zip Code`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
+ggplot(dallas_model_data, aes(x=dallas_model_data$`Division`, y=dallas_model_data$`number of crimes`)) + geom_boxplot()
 
 ```
 
@@ -131,97 +150,205 @@ ggplot(dallas_model_data, aes(x=dallas_model_data$`Zip Code`, y=dallas_model_dat
 library(magrittr)
 library(MESS)
 
-#Check for - Predicting Type of Incident that can occur at a given zip code, time and day of the week using chi-square
 #Null hypothesis : There is no association between 2 variables
 print("Chi Square to check correlation between - Resp Var : Type of Incident, Exp Vars: Zip Code, Day of Week and (rounded time in hour/timeslot)")
 
-#Check chi-square for (Type of incident,Zip Code) 
-tbl_zip<-dallas%>%
-  filter(!is.na(`Type of Incident`) & !is.na(`Zip Code`))%>%
-  categorize(`Type of Incident`,`Zip Code`)
+#Check chi-square for (Type of incident,Zip Code, week of the day and time slot of occurence) 
+tbl_dallas_zrwt<-dallas%>%
+  categorize(`NIBRS Crime Category`,`Division`,`week of the day`,`time slot of occurence`)
 
-print("Chi square value for Type of Incident, Zip Code :")
-  if(chisq.test(tbl_zip,simulate.p.value = TRUE)[[3]]<0.05){
-    print("p-value is significant for Zip code and Type of Incident - Null Hypothesis rejected")
-  }else{
-    print("Null hypothesis sustained - no significant association observed")
-  }
-#Check chi-square for (Type of incident,time)
-tbl_time<-dallas%>%
-  filter(!is.na(`Type of Incident`) & !is.na(`rounded time`))%>%
-  categorize(`Type of Incident`,`rounded time`)
-print("Chi square value for Type of Incident, time :")
-  if(chisq.test(tbl_time,simulate.p.value = TRUE)[[3]]<0.05){
-    print("p-value is significant for time and Type of Incident - Null Hypothesis rejected")
-  }else{
-    print("Null hypothesis sustained - no significant association observed")
-  }
-
-
-#Check chi-square for (Type of incident,day of week)
-tbl_week<-dallas%>%
-  filter(!is.na(`Type of Incident`) & !is.na(`week of the day`))%>%
-  categorize(`Type of Incident`,`week of the day`)
-
-print("Chi square value for Type of Incident, day of week :")
-if(chisq.test(tbl_week,simulate.p.value = TRUE)[[3]]<0.05){
-    print("p-value is significant for day of week and Type of Incident - Null Hypothesis rejected")
-  }else{
-    print("Null hypothesis sustained - no significant association observed")
-  }
-
-#Check chi-square for (Type of incident,time slot)
-tbl_timeslot<-dallas%>%
-  filter(!is.na(`Type of Incident`) & !is.na(`time slot of occurence`))%>%
-  categorize(`Type of Incident`,`time slot of occurence`)
-
-print("Chi square value for Type of Incident, time slot :")
-if(chisq.test(tbl_timeslot,simulate.p.value = TRUE)[[3]]<0.05){
-    print("p-value is significant for time slot and Type of Incident - Null Hypothesis rejected")
+#as_tibble(tbl_dallas_zrwt)
+print("Chi square value for Type of Incident, Zip Code, week of the day and time slot of occurence:")
+#print(chisq.test(tbl_dallas_zrwt))
+  if(chisq.test(tbl_dallas_zrwt,simulate.p.value = TRUE)[[3]]<0.05){
+    print("p-value is significant  - Null Hypothesis rejected")
   }else{
     print("Null hypothesis sustained - no significant association observed")
   }
 
 ```
-*Rough Working- Training model for set 2: classification problem*
+
+*Rough Working attempt 1 - Training model for set 2: classification problem*
+
+Following changes to be implemented and accuracy is to be reviewed :
+
+1. Condensing the number of factor variables in attribute `NIBRS Crime Category` to 20 from 31.
+2. Skipping some values in `NIBRS Crime Category` that has a frequency less than 200 and greater than 20000 - to tackle short head and long tail problem.
+3. using time bins instead of rounded hour attribute
 ```{r}
-library(caret)
+dallas_tzwt_data2<- dallas%>%
+  select(`NIBRS Crime Category`)%>%
+  group_by(`NIBRS Crime Category`)%>%
+  summarise(`frequency`=n())%>%
+  filter(`frequency`<20000 & `frequency`>200)%>%
+  arrange(`frequency`)
 
+as_tibble(dallas_tzwt_data2)
 dallas_tzwt_data<- dallas%>%
-  select(`Type of Incident`,`Zip Code`,`week of the day`,`rounded time`,`Call Received Date Time`)%>%
-  filter(!is.na(`Type of Incident`) & !is.na(`Zip Code`) & !is.na(`week of the day`) & !is.na(`rounded time`))%>%
-  mutate(`Type of Incident`= factor(`Type of Incident`),`week of the day2`= lubridate::wday(`Call Received Date Time`))
+  select(`NIBRS Crime Category`,`Zip Code`,`week of the day`,`time slot of occurence`)%>%
+  filter(`NIBRS Crime Category` %in% dallas_tzwt_data2$`NIBRS Crime Category`)
 
-length(unique(dallas_tzwt_data$`Type of Incident`))
+#as_tibble(dallas_tzwt_data)
+#length(unique(dallas_tzwt_data$`NIBRS Crime Category`))
 
 set.seed(3037)
-intrain <- createDataPartition(y = dallas_tzwt_data$`Type of Incident`, p= 0.7, list = FALSE)
+intrain <- createDataPartition(y = dallas_tzwt_data$`NIBRS Crime Category`, p= 0.7, list = 
+                                 FALSE)
 training <- dallas_tzwt_data[intrain,]
 testing <- dallas_tzwt_data[-intrain,]
 
-anyNA(dallas_tzwt_data)
+#as_tibble(training)
+#anyNA(dallas_tzwt_data)
 
-dim(training)
-dim(testing)
+#dim(training)
+#dim(testing)
 
 trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3,verboseIter = TRUE)
 #set.seed(3233)
 
- svm_Linear <- train(`Type of Incident` ~., data = training, method = "svmLinear",
-                  trControl=trctrl,
-                  preProcess = c("center", "scale"),
-                  tuneLength = 10)
+  # svm_Linear <- train(`NIBRS Crime Category` ~., data = training, method = "svmLinear",
+  #                  trControl=trctrl,
+  #                  preProcess = c("center", "scale"),
+  #                  tuneLength = 10)
+#save(svm_Linear, file = "my_model1.rda")
+load("my_model1.rda")
+test_pred <- predict(svm_Linear, newdata = testing)
+confusionMatrix(test_pred, factor(testing$`NIBRS Crime Category`))
+```
+*Observations from above training :*
 
+1. Model accuracy is 18%, i.e very low.
+2. Model needs to be tuned further 
+  2.1 Reducing the number of categorical values in column `NIBRS Crime Category`
+  2.2 Converting the column `NIBRS Crime Category` to factor type before training.
+  2.3 Hashing/Binning the attribute ZIP Code for a better training.
+  2.4 Left out factors in `NIBRS Crime Category` needs to be included.
+
+*Rough Working attempt 2 - Training model for set 2: classification problem*
+
+Following changes to be implemented and accuracy is to be reviewed :
+
+1. Condensing the number of factor variables in attribute `NIBRS Crime Category` to 8.
+2. Made changes in data cleaning to include `Division` with 7 categorical variables to replace the attribute ZIP Code as explanatory variable.
+3. Factorize the columns before training
+4. Train encoded factors - by generating dummy variables for all the attributes
+5. Building models with SVMLinear and RandomForest
+
+```{r}
+library(caret)
+as_tibble(dallas)
+
+category_bins = tribble(
+  ~Sub,~Category,~CatNum,
+  "BRIBERY","ALL OTHER OFFENSES",1,
+  "HUMAN TRAFFICKING","ALL OTHER OFFENSES",1,
+  "PORNOGRAPHY/ OBSCENE MATERIAL","ALL OTHER OFFENSES",1,
+  "FAMILY OFFENSES, NONVIOLENT","ALL OTHER OFFENSES",1,
+  "DRUG/ NARCOTIC VIOLATIONS","ALL OTHER OFFENSES",1,
+  "ARSON","DESTRUCTION/ DAMAGE/ VANDALISM OF PROPERTY",2,
+  "DESTRUCTION/ DAMAGE/ VANDALISM OF PROPERTY","DESTRUCTION/ DAMAGE/ VANDALISM OF PROPERTY",2,
+  "TRAFFIC VIOLATION - NON HAZARDOUS","TRAFFIC VIOLATION",3,
+  "DRIVING UNDER THE INFLUENCE","TRAFFIC VIOLATION",3,
+  "TRAFFIC VIOLATION - HAZARDOUS","TRAFFIC VIOLATION",3,
+  "ROBBERY","BURGLARY/ BREAKING & ENTERING",4,
+  "MOTOR VEHICLE THEFT","LARCENY/ THEFT OFFENSES",5,
+  "KIDNAPPING/ ABDUCTION","ASSAULT OFFENSES",6,
+  "ANIMAL OFFENSES","ASSAULT OFFENSES",6,
+  "HOMICIDE OFFENSES","ASSAULT OFFENSES",6,
+  "WEAPON LAW VIOLATIONS","ASSAULT OFFENSES",6,
+  "KIDNAPPING/ ABDUCTION","ASSAULT OFFENSES",6,
+  "HOMICIDE OFFENSES","ASSAULT OFFENSES",6,
+  "EMBEZZELMENT","FRAUD OFFENSES",7,
+  "COUNTERFEITING / FORGERY","FRAUD OFFENSES",7,
+  "DRUNKENNESS","DRUNKENNESS/TRESPASSING/NUISANCE",8,
+  "DISORDERLY CONDUCT","DRUNKENNESS/TRESPASSING/NUISANCE",8,
+  "LIQUOR LAW VIOLATIONS","DRUNKENNESS/TRESPASSING/NUISANCE",8,
+  "TRESPASS OF REAL PROPERTY","DRUNKENNESS/TRESPASSING/NUISANCE",8
+  )
+
+dallas_model_condensed<-dallas%>%
+  inner_join(category_bins, by = c("NIBRS Crime Category" = "Sub"))%>%
+  select(`Division`,`week number of the day`,`time slot of occurence`,`CatNum`)%>%
+  mutate(`CatNum`=factor(`CatNum`),`Division`=factor(`Division`),`week number of the day`=factor(`week number of the day`),`time slot of occurence`=factor(`time slot of occurence`))
+#as_tibble(dallas_model_condensed)
+
+dmy <- dummyVars(CatNum  ~., data = dallas_model_condensed,fullRank = T)
+train_transformed <- data.frame(predict(dmy, newdata = dallas_model_condensed))
+#str(train_transformed)
+
+train_transformed$`CatNum`<-dallas_model_condensed$CatNum
+
+
+intrain <- createDataPartition(y = dallas_model_condensed$`CatNum`, p= 0.75, list = FALSE)
+training <- train_transformed[intrain,]
+testing <- train_transformed[-intrain,]
+
+
+trctrl <- trainControl(method = "repeatedcv",verboseIter = TRUE)
+
+  # svm_Linear <- train(`CatNum` ~., data = training, method = "svmLinear",
+  #                  trControl=trctrl,
+  #                  preProcess = c("center", "scale"),
+  #                  tuneLength = 10)
+  # random_Forest<-train(`CatNum` ~., data = training, method = "rf",
+  #                  trControl=trctrl,
+  #                  preProcess = c("center", "scale"),
+  #                  tuneLength = 10)
+  naive_bayes<-train(`CatNum` ~., data = training, method = "nb",
+                   trControl=trctrl)
+  
+save(svm_Linear, file = "my_model_svm_classification.rda")
+save(random_Forest, file = "my_model_rf_classification.rda")
+save(naive_bayes, file = "my_model_nb_classification.rda")
+load("my_model_svm_classification.rda")
+load("my_model_rf_classification.rda")
+load("my_model_nb_classification.rda")
+test_pred_svm <- predict(svm_Linear, newdata = testing)
+test_pred_rf <- predict(random_Forest, newdata = testing)
+test_pred_nb <- predict(naive_bayes, newdata = testing)
+print("SVM Model Performance :")
+confusionMatrix(test_pred_svm, factor(testing$`CatNum`))
+print("Random Forest Model Performance :")
+confusionMatrix(test_pred_rf, factor(testing$`CatNum`))
+print("Naive Bayes Performance :")
+confusionMatrix(test_pred_nb, factor(testing$`CatNum`))
 ```
 
-*Rough Working- Training model for set 1: regression problem*
+
+
 ```{r}
 
 ```
+```{r}
+#as_tibble(dallas_model_condensed)
+dallas_no_crimes<-dallas_model_condensed%>%
+  mutate(`CatNum`=factor(`CatNum`),`Division`=factor(`Division`),`week number of the day`=factor(`week number of the day`),`time slot of occurence`=factor(`time slot of occurence`))%>%
+  group_by(`time slot of occurence`,`Division`,`CatNum`,`week number of the day`)%>%
+  summarise(freq=n())
+as_tibble(dallas_no_crimes)
+
+dmy <- dummyVars(freq  ~., data = dallas_no_crimes,fullRank = T)
+train_transformed <- data.frame(predict(dmy, newdata = dallas_no_crimes))
+str(train_transformed)
+#train_transformed$`CatNum`<-as_factor(train_transformed$`CatNum`)
+train_transformed$`freq`<-dallas_no_crimes$freq
 
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+intrain <- createDataPartition(y = dallas_no_crimes$`freq`, p= 0.7, list = FALSE)
+training <- train_transformed[intrain,]
+testing <- train_transformed[-intrain,]
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+trctrl <- trainControl(method = "repeatedcv", verboseIter = TRUE)
+#set.seed(3233)
+glm_model <- train(`freq` ~., data = training, method = "glm",
+                    trControl=trctrl)
+
+save(glm_model, file = "my_model_glm_regression.rda")
+load("my_model_glm_regression.rda")
+test_pred <- predict(glm_model, newdata = testing)
+
+#confusionMatrix(test_pred, testing$`freq`)
+#test_
+```
+

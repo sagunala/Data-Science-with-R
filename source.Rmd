@@ -31,7 +31,7 @@ data("zipcode")
 *Following chunk performs Data Reading*
 ```{r Reading, echo=TRUE}
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
-dallas<-read_csv('Police_Incidents.csv')
+dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
 dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
 #as_tibble(dallas)
 #summary(dallas)

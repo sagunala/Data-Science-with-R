@@ -101,7 +101,7 @@ filter( (`Victim Gender`=="Male" | `Victim Gender`=="Female"))%>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
 
 ggplot_dgt<-ggplot(dallas_gender_and_timeslot,aes(x=`Victim Gender`,y=`number of crimes`,label=percentage, fill = `time slot of occurence`))  +
-  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Victim Gender",y="Number of Crimes",title="Victim Gender and corresponding Time Slot of Crime Occurence")
+  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Victim Gender",y="Number of Crimes",title="Victim Gender and corresponding Time Slot of Crime Occurence")+guides(fill=guide_legend(title = "Time Slot"))
 ggplotly(ggplot_dgt)
 ```
 
@@ -117,7 +117,7 @@ dallas_crime_and_timeslot<-dallas_incidents%>%
   summarise(`number of crimes` = n())%>%
   arrange(`number of crimes`,.by_group = TRUE)
 
-ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")
+ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")+guides(fill=guide_legend(title = "Time Slot"))
 ggplotly(ggplot_dct)
 ```
 
@@ -135,7 +135,7 @@ dallas_crime_rate_per_week_and_timeslot<-dallas_incidents%>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
 
 ggplot_dcrwt=dallas_crime_rate_per_week_and_timeslot%>%
-  ggplot(aes(x=`week of the day`,y=`number of crimes`, fill = `time slot of occurence` , label=percentage)) +geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+coord_flip()+labs(x="Day in the Week",y="Number of Crimes",title = "Days of Week and Corresponding observed Crimes per Time Slot")
+  ggplot(aes(x=`week of the day`,y=`number of crimes`, fill = `time slot of occurence` , label=percentage)) +geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+coord_flip()+labs(x="Day in the Week",y="Number of Crimes",title = "Days of Week and Corresponding observed Crimes per Time Slot")+guides(fill=guide_legend(title = "Time Slot"))
 
 ggplotly(ggplot_dcrwt)
 ```

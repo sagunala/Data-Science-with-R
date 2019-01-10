@@ -1,22 +1,22 @@
-# Data-Science-with-R
+# Course : Data-Science-with-R
 
-Title: Predictive Policing and EDA on Dallas Crime DataSet
+## Title : An Approach to Predictive Policing with Dallas City
 
-ABSTRACT:
+### ABSTRACT:
 
-This repository contains project details of data analysis on Dalls city crime dataset.
+This repository contains data analysis with R on the reported police indcidents in the city of Dallas. The analysis covers answers to some basic queries -  uncovering some interesting facts and performs a first hand predictive model building that aids in forecasting the future occurences of crimes in terms of its kind and frequency.  
 
-This dataset represents the Dallas Police Public Data - RMS Incidents beginning June 1, 2014 to 2018. The Dallas Police Department strives to collect and disseminate police report information in a timely, accurate manner. This information reflects crimes as reported to the Dallas Police Department as of the current date(2018). Crime classifications are based upon preliminary information supplied to the Dallas Police Department by the reporting parties.
+### WORK SUMMARY:
+ 1. Performing EDA on dataset to find answers to some basic queries from the observed patterns from the graph plots.
+ 2. Building the regression model that predicts frequency of crimes that could occur in a locality at a point in time. Further,   classification model also trained to predict the type of crime that could be occuring at a point in time and the region.
+ 3. Evaluation of the predictive models. 
 
-DATASET
+### DATASET:
 
-We saved the dataset in a dropbox and tried to import the it through url link as the size of the data is 450MB. 
+Dataset that is used in the project is accessed from a replicated file repository in the [dropbox location](https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1). The original source of the dataset is [here](https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7).
 
-DATA
-
-Rows - 473K
+Rows - 473K+
 Columns - 100 
 
-Dropbox link for Dataset used in the project: 
 
- https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1
+ 

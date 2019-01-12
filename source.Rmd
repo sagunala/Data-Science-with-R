@@ -30,7 +30,7 @@ data("zipcode")
 - Following chunk reads the source csv and loads only required attributes into a dataframe object for the use
 *Following chunk performs Data Reading*
 ```{r Reading, echo=TRUE}
-#Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
+
 dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
 dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
 #as_tibble(dallas)
@@ -110,7 +110,7 @@ dallas_crime_and_timeslot<-dallas_incidents%>%
   summarise(`number of crimes` = n())%>%
   arrange(`number of crimes`,.by_group = TRUE)
 
-ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")
+ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NIBRS Crime category and corresponding Time Slot of Occurence")
 ggplotly(ggplot_dct)
 ```
 
@@ -131,18 +131,23 @@ ggplot_dcrwt=dallas_crime_rate_per_week_and_timeslot%>%
 ggplotly(ggplot_dcrwt)
 ```
 
+ 
+
 3.5 How crime rate varies in the week
 
 *Following can be interpreted from the graph*
 -
 
+
+
 ```{r dallas_crime_rate_per_week, echo=FALSE}
+
 dallas_crime_rate_per_week<-dallas_incidents%>%
   select(`rounded time`,`Division`,`week of the day`)%>%
   group_by(`rounded time`,`Division`,`week of the day`)%>%
   summarize(`number of crimes` = n())
 
-ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_boxplot()
+ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
 ggplotly(ggplot_crw)
 ```
 
@@ -237,7 +242,7 @@ dallas_crime_rate<-dallas_incidents%>%
   summarise(freq=n())
 
 ```
-### 4.1.2 Following chunk performs evaluation of variable importance using boxplot visualizations and anova method
+### 4.1.2 Following chunk performs evaluation of variable importance using boxplot/violinplot visualizations and anova method
 
 *Following combinations of attributes were considered for the evaluation*
 
@@ -252,6 +257,19 @@ ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime
 ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
 ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
 
+
+```
+```{r feature selection (regression)}
+d_mod=lm(dallas_crime_rate$`freq` ~ dallas_crime_rate$`Division`+dallas_crime_rate$`week number of the day`+dallas_crime_rate$`rounded time`, data = dallas_crime_rate) 
+summary(d_mod)
+anova(d_mod)
+#confint(d_mod)
+print(as_tibble(dallas_crime_rate))
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
+
+
 ```
 ## 4.2 Feature Selection for Classification problem 
 ### 4.2.1 Following chunk performs the generation of dataframe dallas_crime_type
@@ -260,7 +278,7 @@ ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=da
 - All steps to generate dallas_incidents dataframe
 - group by 'Division', 'rounded time' and 'week number of the day' and summarize the frequency of records to new attribute 'freq'
 
-*Following steps were completed done during preliminary features selection phase :*
+*Following steps were completed during preliminary features selection phase :*
 - Reduction of Location Type attribute to 4 categorical values from 73
 - Usage of 'NIBRS Crime Category'(28 categorical values) instead of 'Category Type'(903 categorical values) attribute
   - Further reduction of 'NIBRS Crime category' to consist 8 categorical values in new attribute 'Category' 

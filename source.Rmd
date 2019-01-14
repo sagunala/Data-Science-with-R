@@ -34,7 +34,7 @@ data("zipcode")
 ```{r Reading, echo=TRUE,message=FALSE, warning=FALSE}
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
-dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
+dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`,`Hate Crime Description`)
 #as_tibble(dallas)
 #summary(dallas)
 ```
@@ -52,12 +52,17 @@ dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Counc
 ```{r Transformation/Cleaning,message=FALSE, warning=FALSE}
 time_slot_vec=seq(0,24,6)
 labels_vec=c("0-6","7-12","13-18","19-23")
+age_breaks <- c(seq(17, 97, by = 20),Inf)
+
+
+age_labels <- c(paste(seq(17, 96, by = 20), seq(0 + 37 - 1, 97 - 1, by = 20),
+                sep = "-"), paste(96, "+", sep = "")) 
 
 dallas$`Zip Code`=clean.zipcodes(dallas$`Zip Code`)
 
 #Dataframe dallas_incidents suitable for visualizing data
 dallas_incidents<-dallas%>%
-   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`))%>%
+  +   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`) & !is.na(`Victim Age at Offense`)  & !is.na(`Hate Crime Description`))%>%
   inner_join(zipcode, by = c("Zip Code" = "zip"))%>%
   filter(`city`=="Dallas")%>%
   mutate(`Division`=str_to_upper(str_replace(`Division`," ","")))%>%

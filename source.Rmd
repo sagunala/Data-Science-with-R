@@ -1,14 +1,16 @@
 ---
-title: "A Approach to Predictive Policing by Team RAAS"
+title: "An Approach to Predictive Policing with Dallas City by Team RAAS"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # 0. Load Required packages
-```{r libraries}
+```{r libraries,message=FALSE, warning=FALSE}
 library(tibble)
 library(dplyr)
 library(magrittr)
@@ -29,10 +31,10 @@ data("zipcode")
 *Objective : Read CSV from data source*
 - Following chunk reads the source csv and loads only required attributes into a dataframe object for the use
 *Following chunk performs Data Reading*
-```{r Reading, echo=TRUE}
-
+```{r Reading, echo=TRUE,message=FALSE, warning=FALSE}
+#Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
-dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
+dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`,`X Coordinate`,`Y Cordinate`)
 #as_tibble(dallas)
 #summary(dallas)
 ```
@@ -47,7 +49,7 @@ dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Counc
 - To remove short head and to keep dataset symmetric, filter rows corresponding to value from "12/31/2016 23:59:59" to "01/06/2019 00:00:00" (This date range consists of equal number of Mon,Tues,Wed etc of 105 counts)
 - Unselect the attributes that are not further required.
 *Following chunk performs Transformation/Cleaning*
-```{r Transformation/Cleaning}
+```{r Transformation/Cleaning,message=FALSE, warning=FALSE}
 time_slot_vec=seq(0,24,6)
 labels_vec=c("0-6","7-12","13-18","19-23")
 
@@ -55,12 +57,12 @@ dallas$`Zip Code`=clean.zipcodes(dallas$`Zip Code`)
 
 #Dataframe dallas_incidents suitable for visualizing data
 dallas_incidents<-dallas%>%
-   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`))%>%
+   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`)& !is.na(`X Coordinate`)& !is.na(`Y Cordinate`))%>%
   inner_join(zipcode, by = c("Zip Code" = "zip"))%>%
   filter(`city`=="Dallas")%>%
   mutate(`Division`=str_to_upper(str_replace(`Division`," ","")))%>%
   mutate(`Call Received Date Time`= as_datetime(mdy_hms(`Call Received Date Time`)))%>%
-  filter(`Call Received Date Time`>as_datetime(mdy_hms("12/31/2016 23:59:59")) &  `Call Received Date Time`<as_datetime(mdy_hms("12/31/2018 23:59:59")))%>%
+  filter(`Call Received Date Time`>as_datetime(mdy_hms("12/31/2016 23:59:59")) &  `Call Received Date Time`<as_datetime(mdy_hms("01/06/2019 00:00:00")))%>%
   mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`week number of the day`=lubridate::wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
   mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))%>%
   arrange(`Call Received Date Time`)%>%
@@ -70,24 +72,28 @@ dallas_incidents<-dallas%>%
 # 3. Exploratory Data Analysis
 *Objective : To evaluate the pattern/trend in the dataset that could 1. Answer some basic questions 2. Help in selecting attributes for predictive analysis*
 
-3.1 What crimes are frequent?
+## 3.1 What crimes are frequent?
 
-*Following can be interpreted from the graph*
--
+### Following can be interpreted from the graph
+- Larcency/Theft offences are the highest frequent in occurence, followed by Assault offences and Property related crimes.
+- Numerous crimes are very negligible in occurence. Crimes such as Human trafficking, bribery, drunkeness among some others are very rare in appearance.
+- Some categories such as 'Miscellenaous' and 'Other crimes' are ambigous. However, they have a decent frequency of occurence.
 
-```{r ggplot_frq_crime, echo=FALSE}
+```{r ggplot_frq_crime, echo=FALSE,message=FALSE, warning=FALSE}
 ggplot_frq_crime<-dallas_incidents%>%
   ggplot(aes(fct_infreq(`NIBRS Crime Category`),fill=`NIBRS Crime Category`))+geom_bar(position = "stack") +  labs(title="Crime Categories Frequency", subtitle="count for every kind of crime that occured", y="Frequency", x="Crime") + coord_flip() + theme(legend.position="none")
 
 ggplotly(ggplot_frq_crime)
 ```
 
-3.2 How Gender and the time of crime are related and volume of crime for each time slot.
+## 3.2 How victim gender and the time of crime are related and volume of crime for each time slot.
 
-*Following can be interpreted from the graph*
--
+### Following can be interpreted from the graph
+- Interesting observation is Male are more prone to be victim during late night (00:00 to 06:00). 
+- Females victims are higher during the afternoon slot (13:00 to 18:00)
 
-```{r dallas_gender_and_timeslot, echo=FALSE}
+Please note : above observations could also be misleading as the relative population size of the city is not being considered.
+```{r dallas_gender_and_timeslot, echo=FALSE,message=FALSE, warning=FALSE}
 dallas_gender_and_timeslot<-dallas_incidents%>%
 filter( (`Victim Gender`=="Male" | `Victim Gender`=="Female"))%>%
   group_by(`Victim Gender`,`time slot of occurence`)%>%
@@ -95,77 +101,83 @@ filter( (`Victim Gender`=="Male" | `Victim Gender`=="Female"))%>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
 
 ggplot_dgt<-ggplot(dallas_gender_and_timeslot,aes(x=`Victim Gender`,y=`number of crimes`,label=percentage, fill = `time slot of occurence`))  +
-  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Victim Gender",y="Number of Crimes",title="Victim Gender and corresponding Time Slot of Crime Occurence")
+  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Victim Gender",y="Number of Crimes",title="Victim Gender and corresponding Time Slot of Crime Occurence")+guides(fill=guide_legend(title = "Time Slot"))
 ggplotly(ggplot_dgt)
 ```
 
-3.3 How crimes relate to the time of day
+## 3.3 How crimes relate to the time of day
 
-*Following can be interpreted from the graph*
--
+### Following can be interpreted from the graph
+- The top 3 crimes mentioned earlier i.e, Larcency/Theft offences , Assault offences and Property related crimes seems to have equal number of occurences during late night slight (00:00 to 6:00). This means lesser possibilities of occurence of Larcency/Theft offences during this time slot in comparison to Assault offences and Property related crimes.
+- Another interesting observation is - Burglary /Breaking and entering is relatively very low during evening times (19:00 to 6:00) in comparison to day time (7:00 to 18:00) - This observation also related directly to the above observation 
 
-```{r dallas_crime_and_timeslot, echo=FALSE}
+```{r dallas_crime_and_timeslot, echo=FALSE,message=FALSE, warning=FALSE}
 dallas_crime_and_timeslot<-dallas_incidents%>%
   group_by(`NIBRS Crime Category`,`time slot of occurence`)%>%
   summarise(`number of crimes` = n())%>%
   arrange(`number of crimes`,.by_group = TRUE)
 
-ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NIBRS Crime category and corresponding Time Slot of Occurence")
+ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")+guides(fill=guide_legend(title = "Time Slot"))
 ggplotly(ggplot_dct)
 ```
 
-3.4 How crimes are related to days of the week and time slot of occurence
+## 3.4 How crimes are related to days of the week and time slot of occurence
 
-*Following can be interpreted from the graph*
--
+### Following can be interpreted from the graph
+- Late night (00:00 to 6:00) on weekends has higher occurence of crime in comparison to that of weekdays - possible reason could be higher number of people staying outdoors on weekends leading to higher chances of crimes.
+- Monday and Friday seems to have highest number of crimes in the week.
+- Day time (7:00 to 18:00) on weekends seems to have lesser frequency of crimes in comparison to that of weekdays - possible reason could be fewer number of people being outdoors leading to lesser chances of crimes.
 
-```{r dallas_crime_rate_per_week_and_timeslot, echo=FALSE}
+```{r dallas_crime_rate_per_week_and_timeslot, echo=FALSE,message=FALSE, warning=FALSE}
 dallas_crime_rate_per_week_and_timeslot<-dallas_incidents%>%
   group_by(`time slot of occurence`,`week of the day`)%>%
   summarize(`number of crimes` = n())%>%
   mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
 
 ggplot_dcrwt=dallas_crime_rate_per_week_and_timeslot%>%
-  ggplot(aes(x=`week of the day`,y=`number of crimes`, fill = `time slot of occurence` , label=percentage)) +geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+coord_flip()+labs(x="Day in the Week",y="Number of Crimes",title = "Days of Week and Corresponding observed Crimes per Time Slot")
+  ggplot(aes(x=`week of the day`,y=`number of crimes`, fill = `time slot of occurence` , label=percentage)) +geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+coord_flip()+labs(x="Day in the Week",y="Number of Crimes",title = "Days of Week and Corresponding observed Crimes per Time Slot")+guides(fill=guide_legend(title = "Time Slot"))
 
 ggplotly(ggplot_dcrwt)
 ```
 
- 
-
-3.5 How crime rate varies in the week
-
-*Following can be interpreted from the graph*
--
 
 
-```{r dallas_crime_rate_per_week, echo=FALSE}
+## 3.7 Heatmap
 
-dallas_crime_rate_per_week<-dallas_incidents%>%
-  select(`rounded time`,`Division`,`week of the day`)%>%
-  group_by(`rounded time`,`Division`,`week of the day`)%>%
+
+```{r}
+dallastw<-dallas_incidents%>%
+group_by(`time slot of occurence`,`week of the day`)%>%
   summarize(`number of crimes` = n())
 
-ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
-ggplotly(ggplot_crw)
+ggplot(data = dallastw, aes(x= `time slot of occurence`, y = `number of crimes`, fill = `week of the day`)) + geom_line(aes(group = `week of the day` , color = `week of the day`)) + coord_flip() + labs(x = "Time of occurence",y="Number of Crimes",title="Crime per day and corresponding time slot of occurence ")
 ```
 
-# 4. Feature Selection for Predictive Analysis
-*Two types of problems were designed for the given dataset : 1. Regression, 2. Classification*
+```{r}
+ggplot(data=dallastw, aes(x= `time slot of occurence`, y = `week of the day`)) + geom_tile(aes(fill = `number of crimes`)) + scale_fill_gradient(name = 'Total Crimes', low = 'white', high = 'red') + theme(axis.title.y = element_blank())
 
-*Objectives : 1. Evaluate attributes and their correlation, 2. Generate datasets dallas_crime_rate(regression) and dallas_crime_type(classification) suitable to solve the designed problems*
+```
+
+
+
+# 4. Feature Selection for Predictive Analysis
+- Two types of problems were designed for the given dataset : 1. Regression, 2. Classification
+
+- Objectives : 
+ - 1. Evaluate attributes and their correlation
+ - 2. Generate datasets dallas_crime_rate(regression) and dallas_crime_type(classification) suitable to solve the designed problems
 
 ## 4.1 Feature Selection for Regression problem
 
 ### 4.1.1 Following chunk performs the generation of dataframe dallas_crime_rate
 
-*Following steps taken to generate dallas_crime_rate dataframe*
+#### 4.1.1.1 Following steps taken to generate dallas_crime_rate dataframe
 - All steps to generate dallas_incidents dataframe
 - group by 'Division', 'rounded time' and 'week number of the day' and summarize the frequency of records to new attribute 'freq'
 
-*Following steps were completed done during preliminary features selection phase :*
+#### 4.1.1.2 Following steps were completed done during preliminary features selection phase :
 - Reduction of Location Type attribute to 4 categorical values from 73
-```{r dallas_crime_rate}
+```{r dallas_crime_rate,message=FALSE, warning=FALSE}
 
 type_location_bins<-tribble(
   ~Sub,~LocationType,~LocNum,
@@ -243,37 +255,43 @@ dallas_crime_rate<-dallas_incidents%>%
 ```
 ### 4.1.2 Following chunk performs evaluation of variable importance using violinplot visualizations and anova method
 
-*Following combinations of attributes were considered for the evaluation*
+#### 4.1.2.1 Following  attributes were considered(in various combinations) for the evaluation
+- frequency ~ (ZipCode, LocationType, rounded time, NBIRS Category, time slot of occurence, week number of day and Division )
 
-*Following interpretations can be drawn from the tests*
+#### 4.1.2.2 Following interpretations can be drawn from the tests
+- There were too many outliers for ZipCode and NIBRS Category in boxplot - hence can be rejected
+- Another reason for ignoring NIBRS category completely is - it is not a meaningful variable in describing the response variable
+- There were not too many differences in mean level of 'time slot of occurence' in comparison to that of 'rounded time' from boxplot - hence time slot of occurence can be rejected 
+- Anova method shows combinations of 'Division', 'rounded time' and 'week number of the day' gave much favourable p-value (less than 0.05) than that of 'LocationType', 'rounded time' and 'week number of day'. Thus we select the combination that has relatively lower p-value.
 
-```{r feature selection (regression)}
+Please note : following chunk consists only those variables that were finally selected. 
+```{r feature selection (regression),message=FALSE, warning=FALSE}
 d_mod=lm(dallas_crime_rate$`freq` ~ dallas_crime_rate$`Division`+dallas_crime_rate$`week number of the day`+dallas_crime_rate$`rounded time`, data = dallas_crime_rate) 
 summary(d_mod)
 anova(d_mod)
 #confint(d_mod)
 print(as_tibble(dallas_crime_rate))
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
-
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
 
 ```
 ## 4.2 Feature Selection for Classification problem 
+
 ### 4.2.1 Following chunk performs the generation of dataframe dallas_crime_type
 
-*Following steps taken to generate dallas_crime_type dataframe*
+#### 4.2.1.1 Following steps taken to generate dallas_crime_type dataframe
 - All steps to generate dallas_incidents dataframe
 - group by 'Division', 'rounded time' and 'week number of the day' and summarize the frequency of records to new attribute 'freq'
 
-*Following steps were completed during preliminary features selection phase :*
+#### 4.2.1.2 Following steps were completed done during preliminary features selection phase :
 - Reduction of Location Type attribute to 4 categorical values from 73
 - Usage of 'NIBRS Crime Category'(28 categorical values) instead of 'Category Type'(903 categorical values) attribute
   - Further reduction of 'NIBRS Crime category' to consist 8 categorical values in new attribute 'Category' 
 - Usage of 'Division'(13 categorical values ) instead of 'Zip Code' (122 categorical values) 
   - Cleaning the 'Division' attribute - bringing values to consistent format, thus reducing to 8 categorical values 
 
-```{r dallas_crime_type}
+```{r dallas_crime_type,message=FALSE, warning=FALSE}
 category_bins = tribble(
   ~Sub,~Category,~CatNum,
   "BRIBERY","ALL OTHER OFFENSES",1,
@@ -309,12 +327,14 @@ dallas_crime_type<-dallas_incidents%>%
   mutate(`Category`=factor(Category),`Division`=factor(`Division`),`week of the day`=factor(`week of the day`),`time slot of occurence`=factor(`time slot of occurence`),`NIBRS Crime Category`=factor(`NIBRS Crime Category`),`rounded time`=factor(`rounded time`))
 ```
 ### 4.2.2 Following chunk performs evaluation of variable importance using chi-square test
-*Null hypothesis : There is no association between 2 variables*
+- Null hypothesis : There is no association between 2 variables
 
-*Following combinations of attributes were considered for the evaluation*
-
-*Following interpretations can be drawn from the tests*
-```{r feature selection (classification)}
+#### 4.2.2.1 Following  attributes were considered(in various combinations) for the evaluation
+- Crime Category ~ (rounded time, time slot of occurence, week of the day and Division)
+#### 4.2.2.2 Following interpretations can be drawn from the tests
+- both combinations of (rounded time, week of the day and Division) and (time slot of occurence, week of the day and Division) passes chi-square test. However, we pick the combination that contains time slot of occurence as it has only factor levels in comparison to that of 24 in rounded time for building model with better accuracy.
+- Another reason to reject rounded time is the duration of traning the model is higher.
+```{r feature selection (classification),message=FALSE, warning=FALSE}
 
 #Following code does not include `NIBRS Crime Category` as it had lower significance than `Category`
 tbl_dallas_zrwt<-dallas_crime_type%>%
@@ -330,7 +350,7 @@ if(chisq.test(table(tbl_dallas_zrwt),simulate.p.value = TRUE)[[3]]<0.05){
 - Both classification and regression models are trained using the explanatory variables that had highest importance(from our inferential statistics tools) in predicting the future outcome
 - Divide the data into training(75%) and testing(25%)
 - Parameters auto-tune length set to 10
-- Cross validation of chunk size 10 to reduce overfitting
+- Resampling method chosen : Cross validation of chunk size 10 
 
 ## 5.1 Regression Model
 - Using the explanatory variables `week of the day`, `rounded time` and `division` for predicting the `crime frequency`
@@ -340,8 +360,7 @@ if(chisq.test(table(tbl_dallas_zrwt),simulate.p.value = TRUE)[[3]]<0.05){
 - preprocess the target attribute to scale and center
 - Using RMSE metrics for cross validation evaluation
 
-*Following chunk performs the task*
-```{r regression training}
+```{r regression training,message=FALSE, warning=FALSE,results = 'hide'}
 dmy <- dummyVars(freq  ~., data = dallas_crime_rate,fullRank = T)
 reg_train_transformed <- data.frame(predict(dmy, newdata = dallas_crime_rate))
 reg_train_transformed$`freq`<-(dallas_crime_rate$freq)
@@ -371,7 +390,7 @@ trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3,verboseIt
 - Using the algorithms SVM,Random Forest and Naive Bayes.
 - preprocess the target attribute to scale and center
 
-```{r classification training}
+```{r classification training,message=FALSE, warning=FALSE,results = 'hide'}
 
 dmy <- dummyVars(Category  ~., data = dallas_crime_type,fullRank = T)
 cls_train_transformed <- data.frame(predict(dmy, newdata = dallas_crime_type))
@@ -407,8 +426,8 @@ trctrl <- trainControl(method = "repeatedcv",number = 10, repeats = 3,verboseIte
 # 6 Model Prediction and Evaluation
 
 ## 6.1 Regression Model 
-- Evaluation using `Area under the curve`
-```{r regression evaluation}
+- Evaluation using `Predicted v/s Actual Dataset Plot` and `RMSE Mean`
+```{r regression evaluation,message=FALSE, warning=FALSE}
 load("lm_regression.rda")
 load("gbm_regression.rda")
 lm_test_pred <- predict(lm_reg_model, newdata = reg_testing)
@@ -426,12 +445,15 @@ plot(as_data_frame(lm_test_pred)$value,as_data_frame(reg_testing$freq)$value,
 summary(lm_reg_model)
 print("Gradient Boosting Model Performance :")
 summary(gbm_reg_model)
+print("Comparison on performance : ")
+res <- resamples(list(lm = lm_reg_model, gbm = gbm_reg_model))
+summary(res)
 ```
 
 ## 6.2 Classification Model
 - Evaluation using `Confusion Matrix`
 
-```{r classification evaluation}
+```{r classification evaluation,message=FALSE, warning=FALSE}
 load("svm_classification.rda")
 load("rf_classification.rda")
 load("nb_classification.rda")
@@ -446,11 +468,16 @@ print("Naive Bayes Performance :")
 confusionMatrix(test_pred_nb, factor(cls_testing$`Category`))
 ```
 
-# 7 Interpretations and Scope of Future Improvement
+# 7 Interpretations and Scope for Future Improvement
 
 ## 7.1 Interpretations
-- Regression Model Evaluation Score : RMSE : Standard Error : Around 17
-- Classification Accuracy : 100%(SVM), 99.98% (RF), 68%(Naive Bayes)
+
+- Regression Model Evaluation 
+-- RMSE Mean : 14(gbm) > 17(lm)
+-- Rsquared : 0.85(lm) > 0.82(gbm)
+
+- Classification Model Evaluation 
+-- Accuracy : 100%(SVM) > 99.98% (RF) > 68%(Naive Bayes)
 
 ## 7.2 Scope for Future Improvement
 - Predicted values in regression fit well with the actual values as per the plotted graphs of actual vs predicted.

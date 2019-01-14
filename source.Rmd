@@ -34,7 +34,7 @@ data("zipcode")
 ```{r Reading, echo=TRUE,message=FALSE, warning=FALSE}
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
-dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`,`X Coordinate`,`Y Cordinate`)
+dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`)
 #as_tibble(dallas)
 #summary(dallas)
 ```
@@ -57,7 +57,7 @@ dallas$`Zip Code`=clean.zipcodes(dallas$`Zip Code`)
 
 #Dataframe dallas_incidents suitable for visualizing data
 dallas_incidents<-dallas%>%
-   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`)& !is.na(`X Coordinate`)& !is.na(`Y Cordinate`))%>%
+   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`)  & !is.na(`Victim Age at Offense`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`))%>%
   inner_join(zipcode, by = c("Zip Code" = "zip"))%>%
   filter(`city`=="Dallas")%>%
   mutate(`Division`=str_to_upper(str_replace(`Division`," ","")))%>%
@@ -143,14 +143,14 @@ ggplotly(ggplot_dcrwt)
 
 
 ## 3.7 Heatmap
-
+### Generation of a line graph based on the crimes and corresponding time slots using which we generate a heat map with the lowest number of crimes being depicted by white and the highest by red. 
 
 ```{r}
 dallastw<-dallas_incidents%>%
 group_by(`time slot of occurence`,`week of the day`)%>%
   summarize(`number of crimes` = n())
 
-ggplot(data = dallastw, aes(x= `time slot of occurence`, y = `number of crimes`, fill = `week of the day`)) + geom_line(aes(group = `week of the day` , color = `week of the day`)) + coord_flip() + labs(x = "Time of occurence",y="Number of Crimes",title="Crime per day and corresponding time slot of occurence ")
+ggplot(data = dallastw, aes(x= `time slot of occurence`, y = `number of crimes`, fill = `week of the day`)) + geom_line(aes(group = `week of the day` , color = `week of the day`)) + coord_flip() + labs(x = "Time of occurence",y="Number of Crimes",title="Crimes and corresponding time slot of occurence ")
 ```
 
 ```{r}

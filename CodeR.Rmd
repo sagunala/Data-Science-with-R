@@ -1,0 +1,139 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# 0. Load Required packages
+```{r libraries, echo=FALSE}
+
+library(tibble)
+library(dplyr)
+library(magrittr)
+library(readr)
+library(zipcode)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+library(forcats)
+library(plotly)
+library(scales)
+library(MESS)
+library(caret)
+data("zipcode")
+```
+
+
+
+#Importing the Dataset
+
+```{r Reading, echo=FALSE}
+#Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
+dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
+dallas%>%
+select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`, `Hate Crime Description`)
+
+
+as_tibble(dallas)
+
+```
+
+```{r Examining the dataset, echo=TRUE }
+
+class(dallas)
+
+glimpse(dallas) # for information about number of observations and their variables, also names, type and first few values of each variable
+
+skimr::skim(dallas) #advanced summary + inline histograms
+
+```
+
+
+#1.Data Cleaning and Preprocessing:
+
+
+```{r Transformation/Cleaning}
+
+time_slot_vec=seq(0,24,6)
+
+labels_vec=c("0-6","7-12","13-18","19-23")
+
+dallas$`Zip Code`=clean.zipcodes(dallas$`Zip Code`)
+
+
+age_breaks <- c(seq(17, 97, by = 20),Inf)
+
+
+age_labels <- c(paste(seq(17, 96, by = 20), seq(0 + 37 - 1, 97 - 1, by = 20),
+                sep = "-"), paste(96, "+", sep = "")) 
+
+#Dataframe dallas_incidents suitable for visualizing data
+
+dallas_incidents <- dallas%>%
+   filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Date Time`) & !is.na(`Zip Code`) & !is.na(`NIBRS Crime Category`) & !is.na(`Type  Location`) & !is.na(Sector) & !is.na(`Council District`) & !is.na(`Victim Age at Offense`) & `Victim Age at Offense` != 0 & `Victim Age at Offense` != 934 & !is.na(`Hate Crime Description`))%>%
+  inner_join(zipcode, by = c("Zip Code" = "zip"))%>%
+  filter(`city`=="Dallas")%>%
+  mutate(`Division`=str_to_upper(str_replace(`Division`," ","")))%>%
+  mutate(`Call Received Date Time`= as_datetime(mdy_hms(`Call Received Date Time`)))%>%
+  filter(`Call Received Date Time`>as_datetime(mdy_hms("12/31/2016 23:59:59")) &  `Call Received Date Time`<as_datetime(mdy_hms("12/31/2018 23:59:59")))%>%
+  mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`week number of the day`=lubridate::wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
+  mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))%>%
+  arrange(`Call Received Date Time`)%>%
+mutate(`age group` = as.numeric(`Victim Age at Offense`)) %>%
+mutate(`age group` = cut(`age group`, breaks = age_breaks, labels = age_labels, right=FALSE)) %>%
+arrange(`age group`)%>%
+select(-`city`,-`state`,-`latitude`,-`longitude`)
+as.tibble(dallas_incidents)
+```
+
+
+
+Visualizations:
+
+Q. What percentage of crimes are "Hate crimes"? 
+```{r Hate Crime Analysis, echo=FALSE}
+
+ggplot_hc <-dallas_incidents%>%
+select(`Hate Crime Description`)%>%
+group_by(`Hate Crime Description`)%>%
+summarize( `number of crimes` = n())
+ggplot_hc
+
+#Since 99% of instance values are `none and unknown´ , there is not enough evidence to suppport the conclusion that maximum hate  crimes are against Anti Homosexual and Anti black communities.
+```
+Q.What age group in adults (over 18) is highly prone to be a victim? changed to
+What age group in adults (over 16) is highly prone to be a victim?
+```{r age group ,echo=FALSE}
+range(dallas_incidents$`Victim Age at Offense`)
+
+dallas_incidents%>%
+group_by(`age group`)%>%
+summarize( 
+          `number of crimes` = n())
+
+
+ggplot_ag<-ggplot(data = dallas_incidents, aes(x = `age group`)) + geom_density( alpha = .5, fill = "blue")
+ggplot_ag
+
+
+
+ggplot_age<-dallas_incidents%>%
+group_by(`age group`)%>%
+summarize( `number of crimes` = n())%>%
+mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
+
+ggplot(data = ggplot_age, mapping = aes(x=`age group`,y=`number of crimes`,label=percentage, fill = `age group`))  +
+  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Age group",y="Number of Crimes",title="Age group suffering the wrath of Crimes ")
+```
+
+
+
+
+
+
+
+
+

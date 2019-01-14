@@ -139,6 +139,44 @@ ggplot_dcrwt=dallas_crime_rate_per_week_and_timeslot%>%
 
 ggplotly(ggplot_dcrwt)
 ```
+## 3.5  What percentage of crimes are "Hate crimes"? 
+###Not feasible 
+- Since 99% of instance values are `none and unknown´ , there is not enough evidence to suppport the conclusion that maximum hate  crimes are against Anti Homosexual and Anti black communities, which can  be interpreted  from the instance values.
+```{r Hate Crime Analysis, echo=FALSE}
+
+ggplot_hc <-dallas_incidents%>%
+select(`Hate Crime Description`)%>%
+group_by(`Hate Crime Description`)%>%
+summarize( `number of crimes` = n())
+ggplot_hc
+
+```
+##3.6 What age group in adults (over 18) is highly prone to be a victim? changed to What age group in adults (over 16) is highly prone to be a victim?
+###Following can be interpreted from the graphs
+- Minimum age = 17 and Maximum age = 118.
+- Density plot depicts the spread of the age group variable, showing that maximum instances arein 17-36 age group.
+- The bar graph depicts that the maximum percentage of crime victims belong to 17-36 age group, followed by 37-56 age group and minimum in the 96+ age group.
+
+```{r age group ,echo=FALSE}
+range(dallas_incidents$`Victim Age at Offense`)
+
+dallas_incidents%>%
+group_by(`age group`)%>%
+summarize( 
+          `number of crimes` = n())
+
+ggplot_ag<-ggplot(data = dallas_incidents, aes(x = `age group`)) + geom_density( alpha = .5, fill = "blue")
+ggplot_ag
+
+ggplot_age<-dallas_incidents%>%
+group_by(`age group`)%>%
+summarize( `number of crimes` = n())%>%
+mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))
+
+ggplot(data = ggplot_age, mapping = aes(x=`age group`,y=`number of crimes`,label=percentage, fill = `age group`))  +
+  geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Age group",y="Number of Crimes",title="Age group suffering the wrath of Crimes ")
+ggplotly()
+```
 
 # 4. Feature Selection for Predictive Analysis
 - Two types of problems were designed for the given dataset : 1. Regression, 2. Classification

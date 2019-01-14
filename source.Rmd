@@ -139,7 +139,6 @@ ggplotly(ggplot_dcrwt)
 -
 
 
-
 ```{r dallas_crime_rate_per_week, echo=FALSE}
 
 dallas_crime_rate_per_week<-dallas_incidents%>%
@@ -242,23 +241,12 @@ dallas_crime_rate<-dallas_incidents%>%
   summarise(freq=n())
 
 ```
-### 4.1.2 Following chunk performs evaluation of variable importance using boxplot/violinplot visualizations and anova method
+### 4.1.2 Following chunk performs evaluation of variable importance using violinplot visualizations and anova method
 
 *Following combinations of attributes were considered for the evaluation*
 
 *Following interpretations can be drawn from the tests*
-```{r feature selection (regression)}
-d_mod=lm(dallas_crime_rate$`freq` ~ dallas_crime_rate$`Division`+dallas_crime_rate$`week number of the day`+dallas_crime_rate$`rounded time`, data = dallas_crime_rate) 
-summary(d_mod)
-anova(d_mod)
-#confint(d_mod)
-print(as_tibble(dallas_crime_rate))
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
 
-
-```
 ```{r feature selection (regression)}
 d_mod=lm(dallas_crime_rate$`freq` ~ dallas_crime_rate$`Division`+dallas_crime_rate$`week number of the day`+dallas_crime_rate$`rounded time`, data = dallas_crime_rate) 
 summary(d_mod)

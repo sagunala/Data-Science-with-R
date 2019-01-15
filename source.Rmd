@@ -72,7 +72,11 @@ filter(!is.na(`Offense Status`) & !is.na(`Division`) & !is.na(`Call Received Dat
   mutate(`week of the day`=lubridate::wday(`Call Received Date Time`,label = TRUE, abbr = FALSE),`week number of the day`=lubridate::wday(`Call Received Date Time`),`rounded time`=hour(round_date(`Call Received Date Time`,"hour")))%>%
   mutate(`time slot of occurence`=cut(`rounded time`,breaks = time_slot_vec,labels = labels_vec,include.lowest = TRUE))%>%
   arrange(`Call Received Date Time`)%>%
+mutate(`age group` = as.numeric(`Victim Age at Offense`)) %>%
+mutate(`age group` = cut(`age group`, breaks = age_breaks, labels = age_labels, right=FALSE)) %>%
+arrange(`age group`)%>%
   select(-`city`,-`state`,-`latitude`,-`longitude`)
+as_tibble(dallas_incidentssadds)
 
 ```
 # 3. Exploratory Data Analysis
@@ -168,8 +172,7 @@ range(dallas_incidents$`Victim Age at Offense`)
 
 dallas_incidents%>%
 group_by(`age group`)%>%
-summarize( 
-          `number of crimes` = n())
+summarize( `number of crimes` = n())
 
 ggplot_ag<-ggplot(data = dallas_incidents, aes(x = `age group`)) + geom_density( alpha = .5, fill = "blue")
 ggplot_ag

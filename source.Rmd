@@ -76,7 +76,7 @@ mutate(`age group` = as.numeric(`Victim Age at Offense`)) %>%
 mutate(`age group` = cut(`age group`, breaks = age_breaks, labels = age_labels, right=FALSE)) %>%
 arrange(`age group`)%>%
   select(-`city`,-`state`,-`latitude`,-`longitude`)
-as_tibble(dallas_incidentssadds)
+as_tibble(dallas_incidents)
 
 ```
 # 3. Exploratory Data Analysis

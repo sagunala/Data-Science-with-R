@@ -152,7 +152,7 @@ ggplotly(ggplot_dcrwt)
 ## 3.5  What percentage of crimes are "Hate crimes"? 
 ###Not feasible 
 - Since 99% of instance values are `none and unknown´ , there is not enough evidence to suppport the conclusion that maximum hate  crimes are against Anti Homosexual and Anti black communities, which can  be interpreted  from the instance values.
-```{r Hate Crime Analysis, echo=FALSE}
+```{r Hate Crime Analysis, echo=FALSE,message=FALSE, warning=FALSE}
 
 ggplot_hc <-dallas_incidents%>%
 select(`Hate Crime Description`)%>%
@@ -167,7 +167,7 @@ ggplot_hc
 - Density plot depicts the spread of the age group variable, showing that maximum instances arein 17-36 age group.
 - The bar graph depicts that the maximum percentage of crime victims belong to 17-36 age group, followed by 37-56 age group and minimum in the 96+ age group.
 
-```{r age group ,echo=FALSE}
+```{r age group ,echo=FALSE,message=FALSE, warning=FALSE}
 range(dallas_incidents$`Victim Age at Offense`)
 
 dallas_incidents%>%
@@ -190,10 +190,7 @@ ggplotly()
 
 *Following can be interpreted from the graph*
 -
-
-
-
-```{r dallas_crime_rate_per_week, echo=FALSE}
+```{r dallas_crime_rate_per_week, echo=FALSE,message=FALSE, warning=FALSE}
 
 dallas_crime_rate_per_week<-dallas_incidents%>%
   select(`rounded time`,`Division`,`week of the day`)%>%
@@ -209,7 +206,7 @@ ggplotly(ggplot_crw)
 
 ### Generation of a line graph based on the crimes and corresponding time slots using which we generate a heat map with the lowest number of crimes being depicted by white and the highest by red. 
 
-```{r}
+```{r lineplot,echo=FALSE,message=FALSE, warning=FALSE}
 dallastw<-dallas_incidents%>%
 group_by(`time slot of occurence`,`week of the day`)%>%
   summarize(`number of crimes` = n())
@@ -218,7 +215,7 @@ ggplot(data = dallastw, aes(x= `time slot of occurence`, y = `number of crimes`,
 ```
 
 
-```{r}
+```{r heatmap,echo=FALSE,,message=FALSE, warning=FALSE}
 ggplot(data=dallastw, aes(x= `time slot of occurence`, y = `week of the day`)) + geom_tile(aes(fill = `number of crimes`)) + scale_fill_gradient(name = 'Total Crimes', low = 'white', high = 'red') + theme(axis.title.y = element_blank())
 
 ```

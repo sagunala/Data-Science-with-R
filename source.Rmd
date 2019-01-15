@@ -127,7 +127,7 @@ dallas_crime_and_timeslot<-dallas_incidents%>%
   summarise(`number of crimes` = n())%>%
   arrange(`number of crimes`,.by_group = TRUE)
 
-ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NBIRS Crime category and corresponding Time Slot of Occurence")+guides(fill=guide_legend(title = "Time Slot"))
+ggplot_dct=ggplot(dallas_crime_and_timeslot,aes(x=reorder(`NIBRS Crime Category`,-`number of crimes`),y=`number of crimes`, fill = `time slot of occurence`)) +geom_bar(position = "stack",stat = "identity")+coord_flip()+labs(x="NIBRS Crime Category",y="Number of Crimes",title = "NIBRS Crime category and corresponding Time Slot of Occurence")+guides(fill=guide_legend(title = "Time Slot"))
 ggplotly(ggplot_dct)
 ```
 
@@ -152,7 +152,7 @@ ggplotly(ggplot_dcrwt)
 ## 3.5  What percentage of crimes are "Hate crimes"? 
 ###Not feasible 
 - Since 99% of instance values are `none and unknown´ , there is not enough evidence to suppport the conclusion that maximum hate  crimes are against Anti Homosexual and Anti black communities, which can  be interpreted  from the instance values.
-```{r Hate Crime Analysis, echo=FALSE ,message=FALSE, warning=FALSE}
+```{r Hate Crime Analysis, echo=FALSE,message=FALSE, warning=FALSE}
 
 ggplot_hc <-dallas_incidents%>%
 select(`Hate Crime Description`)%>%
@@ -186,6 +186,40 @@ ggplot(data = ggplot_age, mapping = aes(x=`age group`,y=`number of crimes`,label
   geom_bar(position = "stack",stat = "identity")+geom_text( size = 3, position = position_stack(vjust = 0.5))+labs(x = "Age group",y="Number of Crimes",title="Age group suffering the wrath of Crimes ")
 ggplotly()
 ```
+## 3.7 How crime rate varies in the week
+
+*Following can be interpreted from the graph*
+-
+```{r dallas_crime_rate_per_week, echo=FALSE,message=FALSE, warning=FALSE}
+
+dallas_crime_rate_per_week<-dallas_incidents%>%
+  select(`rounded time`,`Division`,`week of the day`)%>%
+  group_by(`rounded time`,`Division`,`week of the day`)%>%
+  summarize(`number of crimes` = n())
+
+ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_boxplot()
+ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
+ggplotly(ggplot_crw)
+```
+
+##3.8 Heatmap
+
+### Generation of a line graph based on the crimes and corresponding time slots using which we generate a heat map with the lowest number of crimes being depicted by white and the highest by red. 
+
+```{r lineplot,echo=FALSE,message=FALSE, warning=FALSE}
+dallastw<-dallas_incidents%>%
+group_by(`time slot of occurence`,`week of the day`)%>%
+  summarize(`number of crimes` = n())
+
+ggplot(data = dallastw, aes(x= `time slot of occurence`, y = `number of crimes`, fill = `week of the day`)) + geom_line(aes(group = `week of the day` , color = `week of the day`)) + coord_flip() + labs(x = "Time of occurence",y="Number of Crimes",title="Crime per day and corresponding time slot of occurence ")
+```
+
+
+```{r heatmap,echo=FALSE,,message=FALSE, warning=FALSE}
+ggplot(data=dallastw, aes(x= `time slot of occurence`, y = `week of the day`)) + geom_tile(aes(fill = `number of crimes`)) + scale_fill_gradient(name = 'Total Crimes', low = 'white', high = 'red') + theme(axis.title.y = element_blank())
+
+```
+
 
 # 4. Feature Selection for Predictive Analysis
 - Two types of problems were designed for the given dataset : 1. Regression, 2. Classification
@@ -280,7 +314,7 @@ dallas_crime_rate<-dallas_incidents%>%
   summarise(freq=n())
 
 ```
-### 4.1.2 Following chunk performs evaluation of variable importance using boxplot visualizations and anova method
+### 4.1.2 Following chunk performs evaluation of variable importance using violin visualizations and anova method
 
 #### 4.1.2.1 Following  attributes were considered(in various combinations) for the evaluation
 - frequency ~ (ZipCode, LocationType, rounded time, NBIRS Category, time slot of occurence, week number of day and Division )
@@ -298,10 +332,9 @@ summary(d_mod)
 anova(d_mod)
 #confint(d_mod)
 print(as_tibble(dallas_crime_rate))
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
-
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
 ```
 ## 4.2 Feature Selection for Classification problem 
 

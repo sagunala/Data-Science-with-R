@@ -152,7 +152,7 @@ ggplotly(ggplot_dcrwt)
 ## 3.5  What percentage of crimes are "Hate crimes"? 
 ###Not feasible 
 - Since 99% of instance values are `none and unknown´ , there is not enough evidence to suppport the conclusion that maximum hate  crimes are against Anti Homosexual and Anti black communities, which can  be interpreted  from the instance values.
-```{r Hate Crime Analysis, echo=FALSE}
+```{r Hate Crime Analysis, echo=FALSE ,message=FALSE, warning=FALSE}
 
 ggplot_hc <-dallas_incidents%>%
 select(`Hate Crime Description`)%>%
@@ -167,7 +167,7 @@ ggplot_hc
 - Density plot depicts the spread of the age group variable, showing that maximum instances arein 17-36 age group.
 - The bar graph depicts that the maximum percentage of crime victims belong to 17-36 age group, followed by 37-56 age group and minimum in the 96+ age group.
 
-```{r age group ,echo=FALSE}
+```{r age group ,echo=FALSE,message=FALSE, warning=FALSE}
 range(dallas_incidents$`Victim Age at Offense`)
 
 dallas_incidents%>%

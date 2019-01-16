@@ -30,8 +30,8 @@ data("zipcode")
 ```
 
 # 1. Data Reading
-*Objective : Read CSV from data source*
-- Following chunk reads the source csv and loads only required attributes into a dataframe object for the use
+*Objective : Read CSV file from data source*
+- Following chunk reads the source csv and loads only required attributes into a dataframe object for use
 *Following chunk performs Data Reading*
 ```{r Reading, echo=TRUE,message=FALSE, warning=FALSE}
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
@@ -49,7 +49,7 @@ dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Counc
 - Transform values of 'rounded time' to four ordinal values and compute 'time slot of occurence' attribute.
 - Clean the dataset to include data only from the city "Dallas"
 - To remove short head and to keep dataset symmetric, filter rows corresponding to value from "12/31/2016 23:59:59" to "01/06/2019 00:00:00" (This date range consists of equal number of Mon,Tues,Wed etc of 105 counts)
-- Unselect the attributes that are not further required.
+- Unselect the attributes that are not required for further analysis.
 *Following chunk performs Transformation/Cleaning*
 ```{r Transformation/Cleaning,message=FALSE, warning=FALSE}
 time_slot_vec=seq(0,24,6)
@@ -86,9 +86,9 @@ as_tibble(dallas_incidents)
 ## 3.1 What crimes are frequent?
 
 ### Following can be interpreted from the graph
-- Larcency/Theft offences are the highest frequent in occurence, followed by Assault offences and Property related crimes.
-- Numerous crimes are very negligible in occurence. Crimes such as Human trafficking, bribery, drunkeness among some others are very rare in appearance.
-- Some categories such as 'Miscellenaous' and 'Other crimes' are ambigous. However, they have a decent frequency of occurence.
+- Larceny/Theft offences have the highest frequency of occurrence, followed by Assault offences and Property related crimes.
+- Numerous crimes are very negligible in terms of occurrence. Crimes such as Human trafficking, bribery, drunkenness are amongst some others are very rare in appearance.
+- Some categories such as 'Miscellenaous' and 'Other crimes' are ambiguous. However, they have a decent frequency of occurrence.
 
 ```{r ggplot_frq_crime, echo=FALSE,message=FALSE, warning=FALSE}
 ggplot_frq_crime<-dallas_incidents%>%
@@ -100,8 +100,8 @@ ggplotly(ggplot_frq_crime)
 ## 3.2 How victim gender and the time of crime are related and volume of crime for each time slot.
 
 ### Following can be interpreted from the graph
-- Interesting observation is Male are more prone to be victim during late night (00:00 to 06:00). 
-- Females victims are higher during the afternoon slot (13:00 to 18:00)
+- Interesting observation is that the Males are more prone to be victim during late night (00:00 to 06:00). 
+- Female victims are higher during the afternoon slot (13:00 to 18:00)
 
 Please note : above observations could also be misleading as the relative population size of the city is not being considered.
 ```{r dallas_gender_and_timeslot, echo=FALSE,message=FALSE, warning=FALSE}
@@ -119,7 +119,7 @@ ggplotly(ggplot_dgt)
 ## 3.3 How crimes relate to the time of day
 
 ### Following can be interpreted from the graph
-- The top 3 crimes mentioned earlier i.e, Larcency/Theft offences , Assault offences and Property related crimes seems to have equal number of occurences during late night slight (00:00 to 6:00). This means lesser possibilities of occurence of Larcency/Theft offences during this time slot in comparison to Assault offences and Property related crimes.
+- The top 3 crimes mentioned earlier i.e, Larceny/Theft offences , Assault offences and Property related crimes seem to have equal number of occurrences during late night slight (00:00 to 6:00). This means that there are lesser possibilities of occurrence of Larceny/Theft offences during this time slot in comparison to Assault offences and Property related crimes.
 - Another interesting observation is - Burglary /Breaking and entering is relatively very low during evening times (19:00 to 6:00) in comparison to day time (7:00 to 18:00) - This observation also related directly to the above observation 
 
 ```{r dallas_crime_and_timeslot, echo=FALSE,message=FALSE, warning=FALSE}
@@ -191,7 +191,8 @@ ggplotly()
 ## 3.7 How crime rate varies in the week
 
 *Following can be interpreted from the graph*
--
+-There is more probability that the frequency of crimes is going to be the highest on Saturday and Sunday around 50-130 mark of number of crimes.
+-On weekdays, the frequency of crimes remains more or else the same.
 ```{r dallas_crime_rate_per_week, echo=FALSE,message=FALSE, warning=FALSE}
 
 dallas_crime_rate_per_week<-dallas_incidents%>%
@@ -199,14 +200,23 @@ dallas_crime_rate_per_week<-dallas_incidents%>%
   group_by(`rounded time`,`Division`,`week of the day`)%>%
   summarize(`number of crimes` = n())
 
-ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_boxplot()
+
 ggplot_crw<-ggplot(dallas_crime_rate_per_week, aes(x=dallas_crime_rate_per_week$`week of the day`, y=dallas_crime_rate_per_week$`number of crimes`)) + geom_violin(trim=FALSE,fill='#56B4E9', color="black")
 ggplotly(ggplot_crw)
 ```
 
 ##3.8 Heatmap
 
-### Generation of a line graph based on the crimes and corresponding time slots using which we generate a heat map with the lowest number of crimes being depicted by white and the highest by red. 
+### A line graph based on the Number of crimes and corresponding time slots followed by a heat map of time slot of occurrence vs day of the week based on number of crimes. 
+*Following can be interpreted from the graph*
+-Monday has the highest criminal activities out of all the days of the week.
+-The criminal activities have the highest amount of occurrence from 13:00 to 18:00.
+-On weekends, Sunday has the higher amount of crime.
+
+For Heatmap:
+-From 00:00 -06:00, crime rate is the least from Tuesday to Thursday.
+-From 07:00-12:00,13:00-18:00, the crime frequency is moderate to maximum for almost all the days.
+-From 19:00-23:00 the crime rate remains more or less the same for all the days.
 
 ```{r lineplot,echo=FALSE,message=FALSE, warning=FALSE}
 dallastw<-dallas_incidents%>%
@@ -316,14 +326,14 @@ dallas_crime_rate<-dallas_incidents%>%
   summarise(freq=n())
 
 ```
-### 4.1.2 Following chunk performs evaluation of variable importance using violin visualizations and anova method
+### 4.1.2 Following chunk performs evaluation of variable importance using boxplot visualizations and anova method
 
 #### 4.1.2.1 Following  attributes were considered(in various combinations) for the evaluation
-- frequency ~ (ZipCode, LocationType, rounded time, NBIRS Category, time slot of occurence, week number of day and Division )
+- frequency ~ (ZipCode, LocationType, rounded time, NIBRS Category, time slot of occurence, week number of day and Division )
 
 #### 4.1.2.2 Following interpretations can be drawn from the tests
-- There were too many outliers for ZipCode and NBIRS Category in boxplot - hence can be rejected
-- Another reason for ignoring NBIRS category completely is - it is not a meaningful variable in describing the response variable
+- There were too many outliers for ZipCode and NIBRS Category in boxplot - hence can be rejected
+- Another reason for ignoring NIBRS category completely is - it is not a meaningful variable in describing the response variable
 - There were not too many differences in mean level of 'time slot of occurence' in comparison to that of 'rounded time' from boxplot - hence time slot of occurence can be rejected 
 - Anova method shows combinations of 'Division', 'rounded time' and 'week number of the day' gave much favourable p-value (less than 0.05) than that of 'LocationType', 'rounded time' and 'week number of day'. Thus we select the combination that has relatively lower p-value.
 
@@ -334,9 +344,9 @@ summary(d_mod)
 anova(d_mod)
 #confint(d_mod)
 print(as_tibble(dallas_crime_rate))
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
-ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_violin(trim = FALSE, fill='#56B4E9', color="black")
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`rounded time`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`Division`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
+ggplot(dallas_crime_rate, aes(x=dallas_crime_rate$`week number of the day`, y=dallas_crime_rate$`freq`)) + geom_boxplot()
 ```
 ## 4.2 Feature Selection for Classification problem 
 

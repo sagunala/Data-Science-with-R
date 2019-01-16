@@ -428,7 +428,7 @@ if(chisq.test(table(tbl_dallas_zrwt),simulate.p.value = TRUE)[[3]]<0.05){
 ## 5.1 Regression Model
 - Using the explanatory variables `week of the day`, `rounded time` and `division` for predicting the `crime frequency`
 - generating dummy variables of the dataframe 
-- Using the boxcox transformation for the response variable `crime frequency` for normalization
+- Using the boxcox transformation for the response variable `crime frequency`
 - Using linear regression model and gradient boosting algorithms.
 - preprocess the target attribute to scale and center
 - Using RMSE metrics for cross validation evaluation

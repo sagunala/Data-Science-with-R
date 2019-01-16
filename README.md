@@ -13,9 +13,9 @@ This repository contains data analysis with R on the reported police indcidents 
 
 ### DATASET:
 
-Dataset that is used in the project is accessed from a replicated file repository in the [dropbox location](https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1). The original source of the dataset is [here](https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7).
+Dataset that is used in the project is accessed from a replicated file repository in the [dropbox location](https://www.dropbox.com/s/lsr9m5vb70lnkqi/Police_Incidents.csv?dl=1). The original source of the dataset is [here](https://www.dallasopendata.com/Public-Safety/Police-Incidents/qv6i-rri7).
 
-Rows - 473K+
+Rows - 498K+
 Columns - 100
 
 ### WEBSITE LINK:

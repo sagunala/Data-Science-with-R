@@ -181,6 +181,7 @@ ggplot_ag<-ggplot(data = dallas_incidents, aes(x = `age group`)) + geom_density(
 ggplot_ag
 
 ggplot_age<-dallas_incidents%>%
+filter(!is.na(`age group`))%>%
 group_by(`age group`)%>%
 summarize( `number of crimes` = n())%>%
 mutate(percentage = sprintf("%.1f%%",(`number of crimes` / sum(`number of crimes`))*100))

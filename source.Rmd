@@ -1,7 +1,9 @@
 ---
-title: "An Approach to Predictive Policing with Dallas City by Team RAAS"
-output: html_document
-editor_options: 
+title: "An Approach to Predictive Policing of Dallas city by Team RAAS"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
   chunk_output_type: console
 ---
 
@@ -34,8 +36,7 @@ data("zipcode")
 ```{r Reading, echo=TRUE,message=FALSE, warning=FALSE}
 #Uncomment below import line only when running the script for first time, to avoid multiple time download of 400+Mb sized dataset
 dallas<-read_csv('https://www.dropbox.com/s/7ldxwrsyd10zx95/Police_Incidents.csv?dl=1')
-dallas%>%
-select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`,`Hate Crime Description`)
+dallas%<>%select(`Service Number ID`,`Type  Location`,`Division`,`Sector`,`Council District`,`Call Received Date Time`,`Victim Gender`,`Victim Age at Offense`,`Offense Status`,`NIBRS Crime Category`,`Zip Code`,`Hate Crime Description`)
 #as_tibble(dallas)
 #summary(dallas)
 ```
@@ -171,6 +172,7 @@ ggplot_hc
 range(dallas_incidents$`Victim Age at Offense`)
 
 dallas_incidents%>%
+filter(!is.na(`age group`))%>%
 group_by(`age group`)%>%
 summarize( `number of crimes` = n())
 
@@ -445,7 +447,7 @@ trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3,verboseIt
 
 ```
 ## 5.2 Classification Model
-- Using the explanatory varibales `week of the day`,`division` and `time slot of occurence` for predicting `Category` (crime type)
+- Using the explanatory variables `week of the day`,`division` and `time slot of occurence` for predicting `Category` (crime type)
 - generating dummy variables of the dataframe
 - Using the algorithms SVM,Random Forest and Naive Bayes.
 - preprocess the target attribute to scale and center
@@ -541,5 +543,5 @@ confusionMatrix(test_pred_nb, factor(cls_testing$`Category`))
 
 ## 7.2 Scope for Future Improvement
 - Predicted values in regression fit well with the actual values as per the plotted graphs of actual vs predicted.
-- Accuracy is high for SVM,RF - High overfitting possibile (or over-simplified model), Accuracy is moderate for Naive Bayes method
+- Accuracy is high for SVM,RF - High overfitting possible (or over-simplified model), Accuracy is moderate for Naive Bayes method
 - Better feature engineering and complex selection of explanatory attributes must be addressed
